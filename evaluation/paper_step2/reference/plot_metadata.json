@@ -1,0 +1,10 @@
+{
+  "bundle_version": "v1",
+  "source_sha256": "e4d22e0f58a3f0507787c5368988f3ea04b425a2dc8bc73c22cab5a42c739754",
+  "script_sha256": "c451860f1edce96a9ea4004144c46b740cdeef775861f7b8ee2c004c8e243dce",
+  "layout": "remaining-delay",
+  "identified": 117,
+  "planned": 120,
+  "positive_benefit_intervals": 10,
+  "intervals": "Paired Student-t 95%, identified and executed pairs; recovery diagnostic scales benefit interval by fixed mean injection impact."
+}

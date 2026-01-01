@@ -1,0 +1,25 @@
+[project]
+name = "observe-backend"
+version = "0.1.0"
+description = "OBSERVE Business Process Simulation - FastAPI backend"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn>=0.29.0",
+    "pydantic>=2.0.0",
+    "pandas>=2.0.0",
+    "numpy>=1.24.0",
+    "openpyxl>=3.1.0",
+    "python-multipart>=0.0.9",
+    "scipy>=1.17.1",
+    "anthropic>=0.116.0",
+]
+
+[tool.uv]
+package = false
+
+[dependency-groups]
+evaluation = [
+ "numpy==2.4.6", "pandas==2.3.3", "scipy==1.17.1", "matplotlib==3.11.2",
+ "log-distance-measures==2.2.0", "pm4py==2.7.23.8", "httpx>=0.28",
+]

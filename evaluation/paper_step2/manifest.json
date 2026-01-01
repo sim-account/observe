@@ -1,0 +1,77 @@
+{
+  "version": "observe-v1",
+  "planned_trials": 120,
+  "controls": 10,
+  "seeds": [
+    2036,
+    2037,
+    2038,
+    2039,
+    2040,
+    2041,
+    2042,
+    2043,
+    2044,
+    2045
+  ],
+  "n_cases": 1000,
+  "warmup_cases": 300,
+  "opportunities": [
+    {
+      "id": "O1",
+      "context": "B",
+      "strengths": [
+        2,
+        2.5,
+        3
+      ]
+    },
+    {
+      "id": "O2",
+      "context": "A",
+      "strengths": [
+        1.5,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "O3",
+      "context": "B",
+      "strengths": [
+        0.6,
+        0.75,
+        0.9
+      ]
+    },
+    {
+      "id": "O4",
+      "context": "B",
+      "strengths": [
+        0.35,
+        0.5,
+        0.65
+      ]
+    }
+  ],
+  "expected_identifications": 117,
+  "misses": [
+    {
+      "id": "O3",
+      "strength": 0.6,
+      "seed": 2042
+    },
+    {
+      "id": "O3",
+      "strength": 0.6,
+      "seed": 2043
+    },
+    {
+      "id": "O3",
+      "strength": 0.6,
+      "seed": 2045
+    }
+  ],
+  "effective_simulations": 247,
+  "study": "Four process behavior opportunities"
+}

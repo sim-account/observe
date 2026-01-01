@@ -1,0 +1,9 @@
+{
+  "version": "v1",
+  "code_version": "observe-v1",
+  "download_url": null,
+  "archive_name": "observe-evaluation-data-v1.tar.gz",
+  "archive_bytes": 129479206,
+  "archive_sha256": "dc913aa5597c97413466c6c310cb52422056d5f13328bf8a250a39caa23798e2",
+  "manifest_sha256": "65d9e810873715ec3d167869fbde1ef596c2a4257b1a7213aaf4d7838ef7aaa2"
+}

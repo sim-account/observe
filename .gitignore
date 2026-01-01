@@ -1,0 +1,10 @@
+/observe-data/
+/generated-results/
+*.tar.gz
+*.zip
+**/.venv/
+**/node_modules/
+**/dist/
+**/__pycache__/
+.DS_Store
+.env
