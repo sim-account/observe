@@ -1,6 +1,6 @@
-# OBSERVE
+# Data-Driven Simulation for Process Improvement: From Process Behavior Observations to Improvement Recommendations
 
-OBSERVE discovers modifiable business process simulation parameters and process behavior observations from event logs, proposes scenario changes, and compares simulated as-is and to-be performance. This repository contains the FastAPI backend, React frontend, and code and reference outputs for both numerical evaluations.
+This repository provides OBSERVE, the implementation accompanying the paper above. OBSERVE discovers a modifiable simulation model and process behavior observations from event logs, derives improvement recommendations, and compares simulated as-is and to-be KPIs to estimate the process-wide impact of selected recommendations. It includes the FastAPI backend, React frontend, and code and reference results for both numerical experiments.
 
 ## Abstract
 
@@ -20,14 +20,14 @@ The application runs without evaluation data or API credentials. Natural-languag
 
 ## Reproduce the numerical evaluations
 
-Install the locked numerical dependencies and the separately distributed data archive:
+Download [observe-evaluation-data-v1.tar.gz (129 MB)](https://drive.google.com/file/d/14BOiA-VJPH8FLYiU_ZoxZkRJawY4zPWl/view?usp=sharing) from Google Drive. Then install the locked numerical dependencies and the archive, replacing the example path with the location of your downloaded file:
 
     uv sync --project backend --locked --group evaluation
     python evaluation/bundle.py install --archive /path/to/observe-evaluation-data-v1.tar.gz
 
-The installer verifies archive and manifest checksums and refuses to overwrite existing data. Archive details are in [data_bundle.json](evaluation/data_bundle.json). A download URL will be added when the data is hosted.
+The installer verifies archive and manifest checksums and refuses to overwrite existing data. Archive details are in [data_bundle.json](evaluation/data_bundle.json).
 
-Generate the as-is accuracy table and four-opportunity figure:
+Reproduce the simulation-accuracy table (Experiment 1) and the opportunity-identification and recommendation-impact figure (Experiment 2):
 
     uv run --project backend --locked --group evaluation python evaluation/reproduce_comparison.py
     uv run --project backend --locked --group evaluation python evaluation/paper_step2/plot_results.py
@@ -36,4 +36,4 @@ The accuracy table is written in LaTeX, Markdown, and CSV formats to generated-r
 
 See [as-is reproduction instructions](evaluation/README_REPRODUCE.md) and the [four-opportunity instructions](evaluation/paper_step2/README.md) and [protocol](evaluation/paper_step2/PROTOCOL.md) for regeneration and verification. Small reference tables and figures are included under each evaluation's reference/ directory.
 
-Both evaluations accept --data-root, overriding OBSERVE_DATA_DIR; the default is observe-data/ in this repository. Generated outputs default to generated-results/ and are kept separate from the inputs. Both directories are Git-ignored.
+Both evaluations accept --data-root, overriding OBSERVE_DATA_DIR; the default is observe-data/ in this repository. Generated outputs default to generated-results/ and are kept separate from the inputs. The evaluation archive, extracted data, and generated outputs are excluded by .gitignore and will not be included in future commits.

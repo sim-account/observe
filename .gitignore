@@ -1,7 +1,11 @@
+# Evaluation data, generated outputs, and downloaded archives
 /observe-data/
 /generated-results/
 *.tar.gz
+*.tar.gz.sha256
 *.zip
+
+# Local dependencies, build artifacts, and configuration
 **/.venv/
 **/node_modules/
 **/dist/
