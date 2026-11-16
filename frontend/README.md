@@ -1,5 +1,12 @@
-# OBSERVE frontend
+# Frontend
 
-Install with npm ci, run npm run dev, and start the backend on 8000; or use ./start.sh from the root. Build with npm run build. The locked Vite toolchain requires Node.js 20.19 or newer.
+The frontend uses React and Vite and requires Node.js 20.19 or newer. Run ./start.sh from the repository root to start it with the backend.
 
-The browser application supports upload, mapping, parameter/observation inspection, recommendations and scenarios, comparisons, constraints, and CSV download. The production build passed; browser testing and video recording are deferred.
+To run the frontend separately, start the backend on port 8000, then run these commands from the frontend directory:
+
+    npm ci
+    npm run dev
+
+Open http://localhost:5173. To create a production build, run:
+
+    npm run build

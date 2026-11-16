@@ -1463,7 +1463,7 @@ def _collect_recommendations(observations: Dict[str, Any]) -> list:
                        "description": f"Reduce '{act}' by {red_pct:.0f}% (global activity speedup)",
                        "baseline_value": 0.0, "modified_value": 0.0}
             else:
-                rec = "Reduce this activity's duration to eliminate the observed performance deviation."
+                rec = "Test a 10% reduction in this activity's duration."
                 sug = {"type": "time", "activity": act, "change_type": "reduce_pct", "value": 10.0,
                        "description": f"Reduce '{act}' by 10%", "baseline_value": 0.0, "modified_value": 0.0}
 
@@ -1512,14 +1512,14 @@ def _collect_recommendations(observations: Dict[str, Any]) -> list:
             cur_direct_pct = round(p_direct * 100, 1)
             default_pct = _round10(p_direct * 100, lo=10.0, hi=100.0)
             if row["rule_type"] == "gate":
-                rec = (f"Enforce direct routing: '{act_a}'→'{act_b}' occurs in {p_event*100:.0f}% of cases. "
-                       f"Adjust the direct rate ({cur_direct_pct:.0f}%) to control how often cases take this path.")
+                rec = (f"Test changing the direct '{act_a}' → '{act_b}' routing probability "
+                       f"from its current {cur_direct_pct:.0f}%. The observed eventual relation is {p_event*100:.0f}%.")
             elif row["rule_type"] == "strong_implication":
-                rec = (f"Ensure '{act_b}' follows '{act_a}': currently occurs in {p_event*100:.0f}% of cases. "
-                       f"Adjust the direct rate ({cur_direct_pct:.0f}%) to enforce this dependency more consistently.")
+                rec = (f"Test changing the direct '{act_a}' → '{act_b}' routing probability "
+                       f"from its current {cur_direct_pct:.0f}%. Direct routing changes do not enforce eventual ordering.")
             else:
-                rec = (f"Prevent cases from bypassing '{act_b}' after '{act_a}' (currently only {p_event*100:.0f}%). "
-                       f"Increase the transition probability to route more cases through '{act_b}'.")
+                rec = (f"Test increasing the direct '{act_a}' → '{act_b}' probability "
+                       f"from its current {cur_direct_pct:.0f}%.")
 
             direct_exists = any(
                 key.split("|||")[-1] == act_a and any(dest == act_b for dest, _ in transitions)
@@ -1688,9 +1688,9 @@ def _collect_recommendations(observations: Dict[str, Any]) -> list:
                 f"(avg {dom_dur:.0f} min) vs minority branches (avg {avg_minor:.0f} min)."
             )
             rec = (
-                f"Enforce faster routing at '{gw}': shift cases away from '{dom_act}' "
-                f"toward shorter alternatives — eliminates ~{saving_per_case:.0f} min/case. "
-                f"Use the Decision Point modification to redistribute branch probabilities."
+                f"Test reducing the '{dom_act}' branch at '{gw}'. "
+                f"Use the Decision Point modification to set the branch probabilities "
+                f"and compare the simulated cycle times."
             )
             items.append({
                 "observation_type": "decision_point_routing",
@@ -1749,9 +1749,8 @@ def _collect_simulation_impact_recommendations(observations: Dict[str, Any]) -> 
     total_cases = int(log_metrics.get("cases_count") or 1) or 1
 
     # ── 1. Capacity bottleneck at most saturated resource ────────────────────
-    # Find the resource whose peak concurrent ≥ its capacity (was fully saturated
-    # in the log).  Adding slots there directly eliminates queues; unlike resource-share
-    # changes, this reduces total queue depth rather than just reshuffling who waits.
+    # Select a resource whose observed concurrency reaches its estimated capacity.
+    # Adding capacity is a candidate change; simulation determines its effect on waiting.
     if ra is not None and not ra.empty and cap_dict:
         # Exclude the synthetic "default" resource — it's not a real bottleneck
         real_cap = {k: v for k, v in cap_dict.items() if k != "default"}
@@ -1787,10 +1786,9 @@ def _collect_simulation_impact_recommendations(observations: Dict[str, Any]) -> 
                     "badge": "CAPACITY BOTTLENECK",
                     "severity": "red" if saturated[top_res] >= 1.0 else "orange",
                     "recommendation": (
-                        f"Eliminate queue buildup: add {new_cap - cur_cap} slot{'s' if new_cap - cur_cap > 1 else ''} to "
-                        f"'{top_res}' (→ {new_cap} total). Every case routed to '{top_act}' will "
-                        f"find a free slot instead of waiting — capacity expansion eliminates total queue depth "
-                        f"rather than just reshuffling who waits."
+                        f"Test adding {new_cap - cur_cap} slot{'s' if new_cap - cur_cap > 1 else ''} to "
+                        f"'{top_res}' ({cur_cap} → {new_cap} total). "
+                        f"Compare the simulated waiting time and utilization."
                     ),
                     "suggestion": {
                         "type": "resource_capacity", "resource": top_res,
@@ -1804,8 +1802,8 @@ def _collect_simulation_impact_recommendations(observations: Dict[str, Any]) -> 
                 })
 
     # ── 2. Top cycle-time contributor (mean_min × visit_frequency) ───────────
-    # The activity whose expected contribution per case is largest is the single
-    # best target for duration reduction — every percent cut here moves cycle time.
+    # Rank activities by mean duration times execution frequency.
+    # This is a processing-time estimate, not a measured cycle-time effect.
     if ta is not None and not ta.empty and avg_ct_min > 0:
         ta2 = ta.copy()
         ta2["contribution_min"] = ta2["mean_minutes"] * ta2["count"] / total_cases
@@ -1829,11 +1827,9 @@ def _collect_simulation_impact_recommendations(observations: Dict[str, Any]) -> 
             "badge": "TOP TIME DRIVER",
             "severity": "red" if contrib_pct > 30 else "orange",
             "recommendation": (
-                f"Eliminate the dominant cycle time driver: a {reduce_pct:.0f}% reduction in '{act}' "
-                f"directly saves ~{savings_pct:.1f}% of total average cycle time "
+                f"Test reducing '{act}' duration by {reduce_pct:.0f}% "
                 f"({mean_min:.0f} → {new_mean:.0f} min). "
-                f"Model automation, parallel tooling, or simplified steps — "
-                f"no other single activity has more direct leverage on cycle time."
+                f"Compare the simulated cycle times to assess the overall effect."
             ),
             "suggestion": {
                 "type": "time", "activity": act,
@@ -1875,9 +1871,9 @@ def _collect_simulation_impact_recommendations(observations: Dict[str, Any]) -> 
                 "badge": "REWORK COST",
                 "severity": "red" if cost_pct > 15 else "orange",
                 "recommendation": (
-                    f"Prevent rework compounding at '{act}': halving the rework rate saves ~{cost_min * 0.5:.0f} min/case. "
-                    f"Rework reduction has a compound effect — fewer re-executions, fewer resource re-bookings, "
-                    f"and reduced downstream queue buildup — especially visible with resource contention enabled."
+                    f"Test halving the rework rate at '{act}' "
+                    f"({rate:.1f}% → {rate * 0.5:.1f}%). "
+                    f"Compare the simulated cycle times and resource waiting."
                 ),
                 "suggestion": {
                     "type": "rework_rate", "activity": act,
@@ -1931,11 +1927,10 @@ def _collect_simulation_impact_recommendations(observations: Dict[str, Any]) -> 
                 "badge": "FAST TRACK",
                 "severity": "orange",
                 "recommendation": (
-                    f"Enforce faster routing: reduce '{best['from_act']}' → '{best['long_act']}' from "
-                    f"{best['long_p']*100:.0f}% to {new_long_pct:.0f}% — the engine "
-                    f"auto-renormalises, routing those cases to shorter paths. "
-                    f"Each rerouted case eliminates {best['long_dur'] - best['short_dur']:.0f} min. "
-                    f"Set the target % below to match your redesign scenario."
+                    f"Test reducing '{best['from_act']}' → '{best['long_act']}' from "
+                    f"{best['long_p']*100:.0f}% to {new_long_pct:.0f}%. "
+                    f"The remaining routes receive the redistributed probability. "
+                    f"Adjust the target below and compare the simulated cycle times."
                 ),
                 "suggestion": {
                     "type": "sequence",
@@ -1992,10 +1987,9 @@ def _collect_simulation_impact_recommendations(observations: Dict[str, Any]) -> 
                     "badge": "DEMAND RELIEF",
                     "severity": "red" if rho > 0.88 else "orange",
                     "recommendation": (
-                        f"Prevent saturation-driven wait explosion: reducing arrival rate by {reduce_pct:.0f}% "
-                        f"({cpd:.1f} → {new_rate:.1f}/day) eliminates ~{(wait_ratio - 1) * 100:.0f}% of average wait time "
-                        f"due to queuing non-linearity near saturation (Kingman's formula). "
-                        f"Model appointment scheduling, intake throttling, or demand smoothing."
+                        f"Test reducing arrivals by {reduce_pct:.0f}% "
+                        f"({cpd:.1f} → {new_rate:.1f} cases/day). "
+                        f"Compare the simulated waiting times to assess the effect of lower demand."
                     ),
                     "suggestion": {
                         "type": "arrival",
@@ -2052,9 +2046,8 @@ def _collect_simulation_impact_recommendations(observations: Dict[str, Any]) -> 
                 "badge": "PARALLEL CONTENTION",
                 "severity": "orange",
                 "recommendation": (
-                    f"Eliminate resource double-booking: serialising '{a}' before '{b}' prevents '{res}' "
-                    f"from being occupied by both activities simultaneously. "
-                    f"Set the co-parallel rate to 0% to enforce fully sequential execution."
+                    f"Test setting the '{a}' → '{b}' parallel-execution probability to 0%. "
+                    f"Compare the simulated cycle times and waiting at '{res}'."
                 ),
                 "suggestion": {
                     "type": "parallel_rate",
@@ -2198,7 +2191,7 @@ def _collect_case_attribute_recommendations(ca_observations: list, observations:
             })
 
         # A time reduction cannot enforce activity occurrence. Keep this as
-        # an observation requiring process redesign, without a fictitious fix.
+        # an observation requiring process redesign rather than a duration change.
         elif sub == "activity_absence" and activity:
             items.append({
                 "observation_type": "case_attribute", "rule_text": rule_text,

@@ -1,34 +1,43 @@
-# As-is simulation accuracy
+# Experiment 1: simulation accuracy
 
-Compare OBSERVE, Simod, DeepGenerator (DGEN), RIMS, and AgentSimulator (AgentSim) on CVS (cvs_pharmacy), P2P, BPI12W (BPIC_2012W), and BPI17W (BPIC_2017W). Lower distances indicate better fidelity.
+This experiment compares OBSERVE, Simod, DeepGenerator (DGEN), RIMS, and AgentSimulator (AgentSim) on CVS, P2P, BPI12W, and BPI17W. Lower log distances indicate higher accuracy. Follow the [main README](../README.md) to install the evaluation data. Run all commands below from the repository root.
 
-Reanalysis scores all 200 supplied simulated logs against the same four held-out test logs:
+## Recreate the results table
 
     uv run --project backend --locked --group evaluation python evaluation/reproduce_comparison.py
 
-It generates comparison_table.tex, comparison_wide.csv, comparison_long.csv, comparison_per_run.csv, and comparison_table.md in generated-results/as_is/comparison/. LaTeX uses the paper's \tool{} macro; define it as OBSERVE and load booktabs and multirow in a standalone document.
+This scores 200 saved simulation logs against the four held-out test logs. Results are written to generated-results/as_is/comparison/ as LaTeX, Markdown, and CSV tables, including results for each run. The LaTeX table uses the paper's OBSERVE macro and requires booktabs and multirow.
 
-Regeneration discovers OBSERVE from prepared training logs and simulates ten logs with seeds 42–51:
+## Rerun OBSERVE
 
     uv run --project backend --locked --group evaluation python evaluation/as_is/run_evaluation.py --skip-evaluation
     uv run --project backend --locked --group evaluation python evaluation/reproduce_comparison.py --observe-logs generated-results/as_is/OBSERVE --output generated-results/as_is/regenerated-comparison
 
-External baseline tools are not rerun. Their saved logs are inputs with recorded hashes. The paper reports default baseline settings; this artifact cannot independently establish every external tool's original invocation or reproduce preprocessing from raw benchmarks. The prepared split is the executable input. The paper specifies chronological first-80%/last-20% case assignment and removal of cases spanning the split; validation checks supplied train/test boundaries and case overlap. That does not recover an absent preprocessing program.
+The first command discovers models from the supplied training logs and generates ten simulation logs per dataset, using seeds 42–51. It uses the learned calendars, history routing, durations, resource contention, and residual waiting times. The number of measured cases matches the test log; the warm-up period spans the training start to the test start. See build_sim_config and derive_warmup_days in as_is/run_evaluation.py for the settings. The second command compares these new OBSERVE logs with the saved baseline logs.
 
-Logs normalize to case_id, activity, start_time, end_time, resource, with UTC timestamps. Test columns: case_id, activity_name, start_timestamp, end_timestamp, resource. OBSERVE/Simod use the normalized schema; DGEN uses caseid, task, start_timestamp, end_timestamp, role; RIMS uses caseid, task, start:timestamp, time:timestamp, role; AgentSim uses case_id, activity_name, start_timestamp, end_timestamp, resource. Storage paths are uniform by method and canonical dataset; column differences remain explicit in code.
+External baseline tools are not rerun. Their saved outputs are supplied, but their original commands and complete preprocessing code are not included. The paper reports default baseline settings and chronological 80/20 case splits with cases spanning the boundary removed. The supplied training and test logs allow checking split boundaries and case overlap, but do not allow reproducing preprocessing from the raw benchmarks.
 
-Metrics use log-distance-measures 2.2.0: NGD (n=3), absolute event distribution (AED), circadian event distribution (CED), relative event distribution (RED), and cycle-time distribution (CTD, one-hour bin). Means and population standard deviations use ten runs (ddof=0). Ascending dataset ranks average ties, then average over four datasets. Missing inputs, unsuccessful scoring, and nonfinite metrics prevent a complete table. Bolding retains tolerance 0.0001; rounding can display apparent ties without tied numerical ranks.
+## Measures and settings
 
-The lock pins Python 3.11, NumPy 2.4.6, pandas 2.3.3, SciPy 1.17.1, Matplotlib 3.11.2, pm4py 2.7.23.8, and log-distance-measures 2.2.0, plus all transitive dependencies in backend/uv.lock.
+Metrics use log-distance-measures 2.2.0: n-gram distance (NGD, n=3), absolute event distribution (AED), circadian event distribution (CED), relative event distribution (RED), and cycle-time distribution (CTD, one-hour bins). Means and population standard deviations use ten runs. Ranks average numerical ties within each dataset, then average over the four datasets. Bolding uses a tolerance of 0.0001; values that look equal after rounding may have different ranks. Missing logs, failed scoring, or nonfinite values prevent generation of a complete table.
 
-Optional flags: comparison --datasets, --methods, --output (--out synonym), --data-root, --observe-logs; generator --dataset, --skip-simulation, --skip-evaluation, --output, --data-root. Supplementary ablations are outside the four-dataset paper contract.
+The locked dependencies are recorded in backend/uv.lock. Reference OBSERVE average ranks are 1.75, 1.75, 2.00, 1.25, and 1.50 for NGD, AED, CED, RED, and CTD. The reference tables contain results recomputed from the supplied logs. The arrival-distance summary and additional ablations are supplementary to the paper's four-dataset comparison.
 
-The generator preserves learned calendars, history routing, exponential arrivals, lognormal durations, contention, residual waiting, test-case population, timestamp normalization, and dynamic warm-up from training start to test start. See build_sim_config and derive_warmup_days for exact configuration. The extra arrival-distance metric and summary are supplementary, with four-dataset coverage.
+Dataset directories are cvs_pharmacy, P2P, BPIC_2012W, and BPIC_2017W. Timestamps are normalized to UTC. The scoring code maps each method's columns as follows:
 
-The reference OBSERVE average ranks are 1.75, 1.75, 2.00, 1.25, 1.50 (NGD/AED/CED/RED/CTD). All supplied methods are scored uniformly from their raw logs; the generated artifacts are authoritative for this bundle.
+| Logs | Case | Activity | Start | End | Resource |
+| --- | --- | --- | --- | --- | --- |
+| OBSERVE, Simod | case_id | activity | start_time | end_time | resource |
+| DGEN | caseid | task | start_timestamp | end_timestamp | role |
+| RIMS | caseid | task | start:timestamp | time:timestamp | role |
+| AgentSim, test logs | case_id | activity_name | start_timestamp | end_timestamp | resource |
 
-Verify consistency across the five generated table formats, prepared split boundaries, and regenerated OBSERVE logs:
+## Verify the outputs
+
+After rerunning OBSERVE, run:
 
     uv run --project backend --locked --group evaluation python evaluation/as_is/verify.py
 
-Run regeneration first. The verifier accepts --comparison and --regenerated to check other output locations. It writes its numerical verification report under generated-results/as_is/verification/.
+This checks the five output table formats, prepared split boundaries, and regenerated OBSERVE logs. The report is saved under generated-results/as_is/verification/. Use --comparison and --regenerated to check outputs saved elsewhere.
+
+Both scripts accept --data-root to choose an input directory instead of observe-data/ or OBSERVE_DATA_DIR. Use --output to choose where results are saved. The comparison also accepts --datasets, --methods, and --observe-logs; the generator accepts --dataset, --skip-simulation, and --skip-evaluation. Run either script with --help for its options.

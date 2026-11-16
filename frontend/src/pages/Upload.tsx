@@ -202,7 +202,7 @@ export default function UploadPage() {
                 <TableProperties className="w-5 h-5 text-gray-600" />
                 <div className="flex-1">
                   <h2 className="font-semibold text-gray-900">Case Log <span className="text-xs font-normal text-gray-400 ml-1">optional</span></h2>
-                  <p className="text-xs text-gray-400 mt-0.5">One row per case with case attributes (region, tier, type…). Enables case-attribute process behavior observations.</p>
+                  <p className="text-xs text-gray-400 mt-0.5">One row per case with attributes such as region, customer tier, or case type.</p>
                 </div>
                 {caseLogUploaded && (
                   <button onClick={() => { setCaseLogFile(null); setCaseLogUploaded(false); setCaseLogCols([]); setCaseLogRowCount(0) }}

@@ -10,24 +10,20 @@ const PAGE = 7
 type TabId = 'time' | 'resource' | 'control_flow' | 'rework' | 'case_attributes'
 
 const TABS: { id: TabId; label: string; tooltip: string }[] = [
-  { id: 'time', label: '⏱ Time', tooltip: 'Conditions that cause an activity\'s duration to deviate significantly from its average — rework history, resource speed gaps, or predecessor effects.' },
-  { id: 'resource', label: '👤 Resource', tooltip: 'Patterns where a specific predecessor activity systematically determines which resource handles the next step, and resource capacity constraints that create queues.' },
-  { id: 'control_flow', label: '🔀 Control Flow', tooltip: 'Structural patterns extracted from case flows (gates, implications, exclusions) and concurrently-executing activities detected when timestamps overlap.' },
-  { id: 'rework', label: '🔄 Rework', tooltip: 'Conditions that raise or lower the probability that an activity is repeated — triggered by a predecessor or by which resource performed it.' },
-  { id: 'case_attributes', label: '🏷 Case Attributes', tooltip: 'How case-level attributes (e.g. customer tier, region, type) influence cycle time, rework rate, or the likelihood that specific activities occur.' },
+  { id: 'time', label: '⏱ Time', tooltip: 'Activity-duration differences associated with repetition, resource assignment, or the preceding activity.' },
+  { id: 'resource', label: '👤 Resource', tooltip: 'Resource-assignment patterns associated with the preceding activity.' },
+  { id: 'control_flow', label: '🔀 Control Flow', tooltip: 'Activity ordering, co-occurrence, and overlapping execution.' },
+  { id: 'rework', label: '🔄 Rework', tooltip: 'Repetition rates associated with the preceding activity or assigned resource.' },
+  { id: 'case_attributes', label: '🏷 Case Attributes', tooltip: 'Cycle time, repetition, and activity occurrence for different case attributes, such as region or customer tier.' },
 ]
 
-const CONFIDENCE_TOOLTIP = `Statistical confidence based on p-value:
-p ≤ 0.0001 → Exceptional confidence (1-in-10,000 chance this pattern is random)
-p ≤ 0.001  → Very high confidence (1-in-1,000)
-p ≤ 0.01   → High confidence (1-in-100)
-p ≤ 0.05   → Moderate confidence (1-in-20 — the standard threshold for statistical significance)`
+const CONFIDENCE_TOOLTIP = `The p-value measures how unusual this difference would be if the compared groups had no difference. Smaller values provide stronger evidence against that assumption; they do not measure the probability that a pattern is random or that a change will improve performance.`
 
 export function confidenceFromPValue(pVal: number): { label: string; color: string } {
-  if (pVal <= 0.0001) return { label: 'Exceptional confidence', color: 'text-gray-900 bg-gray-50' }
-  if (pVal <= 0.001)  return { label: 'Very high confidence',   color: 'text-gray-900 bg-gray-50' }
-  if (pVal <= 0.01)   return { label: 'High confidence',        color: 'text-gray-900 bg-gray-50' }
-  return                     { label: 'Moderate confidence',    color: 'text-gray-600 bg-gray-100' }
+  if (pVal <= 0.0001) return { label: 'p ≤ 0.0001', color: 'text-gray-900 bg-gray-50' }
+  if (pVal <= 0.001)  return { label: 'p ≤ 0.001', color: 'text-gray-900 bg-gray-50' }
+  if (pVal <= 0.01)   return { label: 'p ≤ 0.01', color: 'text-gray-900 bg-gray-50' }
+  return                     { label: 'p ≤ 0.05', color: 'text-gray-600 bg-gray-100' }
 }
 
 export function extractPValue(text: string | undefined): number | null {
@@ -384,9 +380,9 @@ export default function Observations() {
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="flex gap-2">
                   <MetricChip label="Gate rules" value={data.sequence_rules.filter(r => r.rule_type === 'gate').length} color="green"
-                    tooltip="A gate is a conditional branch: this activity only occurs in a subset of cases. Not a loop — cases either contain it or skip it entirely." />
+                    tooltip="This activity occurs in only some cases." />
                   <MetricChip label="Exclusion" value={data.sequence_rules.filter(r => r.rule_type === 'exclusion').length} color="red"
-                    tooltip="Activities A and B rarely appear together in the same case — they represent mutually exclusive process paths." />
+                    tooltip="These activities rarely appear in the same case." />
                 </div>
                 <div className="ml-auto flex items-center gap-3">
                   <FilterBar label="Type" value={seqType} onChange={setSeqType} options={data.filters.sequence_types} />
@@ -440,9 +436,9 @@ export default function Observations() {
                   <div className="flex items-center gap-3 flex-wrap">
                     <div className="flex gap-2 flex-wrap">
                       {([
-                        { type: 'always_parallel', label: 'Always together', color: 'orange' as const, tooltip: 'Activity pairs where both sides have ≥80% parallel rate — they are structurally co-scheduled in nearly every case.' },
-                        { type: 'resource_conditional', label: 'Resource-driven', color: 'blue' as const, tooltip: 'The parallel rate of an activity changes significantly depending on which resource handles it.' },
-                        { type: 'predecessor_conditional', label: 'Predecessor-driven', color: 'blue' as const, tooltip: 'The parallel rate of an activity changes significantly based on which activity preceded it.' },
+                        { type: 'always_parallel', label: 'Frequent overlap', color: 'orange' as const, tooltip: 'Activity pairs with at least 80% overlap rates in both directions.' },
+                        { type: 'resource_conditional', label: 'By resource', color: 'blue' as const, tooltip: 'The parallel rate of an activity changes significantly depending on which resource handles it.' },
+                        { type: 'predecessor_conditional', label: 'By predecessor', color: 'blue' as const, tooltip: 'The parallel rate of an activity changes significantly based on which activity preceded it.' },
                       ] as const).map(({ type, label, color, tooltip }) => {
                         const n = data?.parallel_rules?.filter(r => r.rule_type === type).length ?? 0
                         if (!n) return null
@@ -491,10 +487,10 @@ export default function Observations() {
               ) : (
                 <>
                   <div className="flex gap-2 flex-wrap">
-                    <MetricChip label="Predecessor-triggered" value={data.conditional_routing_rules.filter(r => r.condition_type === 'predecessor').length} color="blue"
-                      tooltip="A preceding activity systematically shifts branch probabilities at this decision point above baseline." />
-                    <MetricChip label="Resource-triggered" value={data.conditional_routing_rules.filter(r => r.condition_type === 'resource').length} color="orange"
-                      tooltip="Which resource performs this activity significantly shifts which downstream branch is taken." />
+                    <MetricChip label="By predecessor" value={data.conditional_routing_rules.filter(r => r.condition_type === 'predecessor').length} color="blue"
+                      tooltip="Branch probabilities differ depending on the preceding activity." />
+                    <MetricChip label="By resource" value={data.conditional_routing_rules.filter(r => r.condition_type === 'resource').length} color="orange"
+                      tooltip="Branch probabilities differ between assigned resources." />
                   </div>
                   <div className="space-y-2">
                     {data.conditional_routing_rules.map((r, i) => {
@@ -524,9 +520,9 @@ export default function Observations() {
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex gap-2">
               <MetricChip label="🔴 Slower conditions" value={data.time_rules.filter(r => (r.ratio ?? 1) > 1).length} color="red"
-                tooltip="Conditions that make this activity take significantly longer than baseline — rework history, slow resources, or specific predecessors." />
+                tooltip="Contexts where activity durations are longer than in the comparison group." />
               <MetricChip label="🟢 Faster conditions" value={data.time_rules.filter(r => (r.ratio ?? 1) < 1).length} color="green"
-                tooltip="Conditions that make this activity run faster than baseline — fast paths worth promoting or protecting." />
+                tooltip="Contexts where activity durations are shorter than in the comparison group." />
             </div>
             <div className="ml-auto flex items-center gap-3">
               <FilterBar label="Condition" value={timeType} onChange={setTimeType} options={data.filters.time_condition_types} />
@@ -567,9 +563,9 @@ export default function Observations() {
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex gap-2">
               <MetricChip label="🔴 More rework" value={data.rework_rules.filter(r => (r.ratio ?? 1) > 1).length} color="red"
-                tooltip="Conditions that significantly raise the rework rate above baseline — problematic predecessors or high-error resources." />
+                tooltip="Contexts where repetition is more common than in the comparison group." />
               <MetricChip label="🟢 Less rework" value={data.rework_rules.filter(r => (r.ratio ?? 1) < 1).length} color="green"
-                tooltip="Conditions that significantly lower the rework rate — best-practice paths or high-quality resources to learn from." />
+                tooltip="Contexts where repetition is less common than in the comparison group." />
             </div>
             <div className="ml-auto flex items-center gap-3">
               <FilterBar label="Condition" value={reworkType} onChange={setReworkType} options={data.filters.rework_condition_types} />
@@ -610,9 +606,9 @@ export default function Observations() {
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex gap-2">
               <MetricChip label="Strong routing (≥3×)" value={data.routing_rules.filter(r => (r.ratio ?? 0) >= 3).length} color="red"
-                tooltip="After a specific predecessor, this resource handles the next activity at least 3× more than their baseline share — a strong hidden routing rule." />
+                tooltip="After this predecessor, the resource’s assignment share is at least three times its share after other predecessors." />
               <MetricChip label="Moderate (1.5–3×)" value={data.routing_rules.filter(r => (r.ratio ?? 0) >= 1.5 && (r.ratio ?? 0) < 3).length} color="orange"
-                tooltip="After a specific predecessor, this resource handles the next activity 1.5–3× more than their baseline share." />
+                tooltip="After this predecessor, the resource’s assignment share is 1.5–3 times its share after other predecessors." />
             </div>
             <div className="ml-auto flex items-center gap-3">
               <FilterBar label="Predecessor" value={routingPred} onChange={setRoutingPred} options={data.filters.routing_predecessors} />
@@ -650,7 +646,7 @@ export default function Observations() {
             <div className="bg-gray-50 border border-gray-100 rounded-none p-10 text-center">
               <p className="text-sm font-semibold text-gray-900 mb-1">No case attribute observations available</p>
               <p className="text-xs text-gray-400 max-w-sm mx-auto">
-                Upload a case log alongside your event log to discover how case attributes (region, tier, type…) influence process behaviour.
+                Provide case attributes in the event log or a separate case log to compare groups such as regions or customer tiers.
               </p>
             </div>
           ) : (
@@ -664,11 +660,11 @@ export default function Observations() {
                     const labels: Record<string, string> = { cycle_time_effect: 'Cycle Time', rework_effect: 'Rework', activity_presence: 'Activity Presence', activity_absence: 'Activity Absence', parallel_effect: 'Parallel' }
                     const colorMap: Record<string, string> = { cycle_time_effect: 'red', rework_effect: 'orange', activity_presence: 'blue', activity_absence: 'gray', parallel_effect: 'blue' }
                     const tooltipMap: Record<string, string> = {
-                    cycle_time_effect: 'Cases with this attribute value take significantly more or less time than the average case.',
-                    rework_effect: 'Cases with this attribute value experience disproportionately more or less rework.',
-                    activity_presence: 'Cases with this attribute value are significantly more likely to include a given activity.',
-                    activity_absence: 'Cases with this attribute value are significantly more likely to skip a given activity.',
-                    parallel_effect: 'Cases with this attribute value significantly raise or lower the probability of an activity executing in parallel.',
+                    cycle_time_effect: 'Cycle times differ between cases with this attribute value and other cases.',
+                    rework_effect: 'Repetition rates differ between cases with this attribute value and other cases.',
+                    activity_presence: 'These cases visit the activity more often than other cases.',
+                    activity_absence: 'These cases visit the activity less often than other cases.',
+                    parallel_effect: 'Overlap rates differ between cases with this attribute value and other cases.',
                   }
                   return <MetricChip key={st} label={labels[st]} value={n} color={colorMap[st]} tooltip={tooltipMap[st]} />
                   })}

@@ -6,5 +6,5 @@ def data_root(explicit=None):
 def output_path(explicit, inputs):
     result = Path(explicit).resolve()
     if result == inputs or inputs in result.parents:
-        raise ValueError("Output must be outside the immutable data bundle")
+        raise ValueError("Choose an output directory outside the input data directory.")
     return result

@@ -31,27 +31,28 @@ const MOD_TYPE_COLORS: Record<string, string> = {
 }
 
 const BADGE_TOOLTIPS: Record<string, string> = {
-  'REWORK PENALTY': 'Cases with prior rework take significantly longer at this step. Reducing upstream rework rate would shrink this penalty.',
-  'RESOURCE GAP': 'Speed varies greatly by resource at this activity. Routing more work to faster resources or upskilling others reduces average duration.',
-  'PREDECESSOR EFFECT': 'The activity immediately before this one systematically changes how long it takes — likely a handoff quality or context-switching effect.',
-  'RESOURCE EFFECT': 'Rework rate at this activity varies significantly depending on which resource performed it.',
-  'GATE': 'This activity only occurs in a subset of cases — an implicit conditional branch in the process.',
-  'IMPLIES': 'When activity A occurs, B almost always follows later in the same case — a strong sequential dependency.',
-  'EXCLUDES': 'A and B rarely co-occur — they represent mutually exclusive paths through the process.',
-  'RESOURCE ROUTING': 'A specific predecessor systematically routes work to one resource, creating a hidden bottleneck.',
-  'SLOW SEGMENT': 'Cases with this attribute value take significantly longer than average.',
-  'HIGH REWORK': 'Cases with this attribute value have disproportionately higher rework rates.',
-  'HIGH DEMAND': 'Cases with this attribute value trigger this activity far more often than average.',
-  'SKIP RISK': 'Cases with this attribute value are significantly more likely to skip this activity.',
-  'CAPACITY BOTTLENECK': 'A resource is being used at or above its capacity — concurrent demand meets its limit, creating queues. Adding capacity has a non-linear benefit near saturation.',
-  'TOP TIME DRIVER': 'This activity contributes the most to total cycle time (frequency × mean duration). Even a modest duration reduction here has a larger end-to-end impact than reducing rare or short activities.',
-  'REWORK COST': 'Rework here is expensive: the activity is long, loops occur multiple times, or the rate is high. Each rework cycle re-books resource slots and re-adds waiting time.',
-  'FAST TRACK': 'The process forks here into paths of very different duration. Shifting more cases toward the faster path reduces average cycle time without changing any individual activity duration.',
-  'DEMAND RELIEF': 'The system is near or above capacity. Reducing case arrival rate has a non-linear benefit via Kingman\'s formula — small reductions in load produce outsized reductions in queue wait.',
-  'PARALLEL CONTENTION': 'Two activities frequently run concurrently and both compete for the same resource. This double-books the resource slot and amplifies queue depth. Serialising them eliminates the double-booking.',
-  'ROUTING BIAS': 'A specific predecessor or resource systematically pushes routing at this decision point toward one branch at a rate far above the overall baseline. Redesigning the upstream path or rebalancing resource assignment shifts the downstream distribution.',
-  'ROUTING SHIFT': 'The dominant downstream branch at this decision point takes significantly longer than the alternatives. Shifting even a modest fraction of cases toward faster branches reduces average cycle time without changing any activity duration.',
+  "REWORK PENALTY": "This activity takes longer in cases where it is repeated.",
+  "RESOURCE GAP": "Duration differs between resources performing this activity. Test reallocating work to see the process-wide effect.",
+  "PREDECESSOR EFFECT": "Activity duration differs depending on the preceding activity.",
+  "RESOURCE EFFECT": "Repetition rates differ between resources performing the activity.",
+  "GATE": "This activity occurs in only some cases.",
+  "IMPLIES": "When activity A occurs, B usually appears later in the same case.",
+  "EXCLUDES": "These activities rarely occur in the same case.",
+  "RESOURCE ROUTING": "Resource assignment differs depending on the preceding activity.",
+  "SLOW SEGMENT": "Cases with this attribute value have longer cycle times than other cases.",
+  "HIGH REWORK": "Cases with this attribute value repeat the activity more often than other cases.",
+  "HIGH DEMAND": "Cases with this attribute value visit the activity more often than other cases.",
+  "SKIP RISK": "Cases with this attribute value visit the activity less often than other cases.",
+  "CAPACITY BOTTLENECK": "Observed concurrent work reaches the resource’s estimated capacity. Test adding capacity to see its effect on waiting.",
+  "TOP TIME DRIVER": "This activity has the largest estimated processing-time contribution, based on its frequency and mean duration.",
+  "REWORK COST": "Repeated executions add processing time and may increase resource waiting.",
+  "FAST TRACK": "The next activities have different average durations. Test changing their routing probabilities.",
+  "DEMAND RELIEF": "Estimated demand is high relative to resource capacity. Test a lower arrival rate to see its effect on waiting.",
+  "PARALLEL CONTENTION": "These activities overlap and commonly use the same resource. Test reducing their parallel execution.",
+  "ROUTING BIAS": "Branch probabilities differ by predecessor or resource. The suggested change applies across the gateway.",
+  "ROUTING SHIFT": "The most common next activity takes longer than the alternatives. Test changing the branch probabilities."
 }
+
 
 const OBSERVATION_TYPE_CATEGORY: Record<string, string> = {
   conditional_time: 'time', top_duration_driver: 'time', arrival_demand_relief: 'time',
@@ -63,8 +64,8 @@ const OBSERVATION_TYPE_CATEGORY: Record<string, string> = {
 }
 
 const CATEGORY_EMPTY_REASON: Record<string, string> = {
-  resource: 'Resource recommendations require a resource column and end_time timestamps in your event log.',
-  control_flow: 'No strong routing shortcuts or demand-saturation patterns were found in this process.',
+  resource: 'Resource recommendations need resource information and completion timestamps in the event log.',
+  control_flow: 'No routing or parallel-execution recommendations were found.',
 }
 
 
@@ -94,14 +95,14 @@ function computeAutoAdjust(
         hasShare && 'resource share',
         hasArrival && 'arrival rate',
       ].filter(Boolean).join(', ')
-      warnings.push(`Resource contention will be auto-enabled (required by: ${triggers})`)
+      warnings.push(`Resource waiting will be enabled for changes to ${triggers}.`)
     } else {
       const triggers = [
         hasCapacity && 'capacity',
         hasShare && 'resource share',
         hasArrival && 'arrival rate',
       ].filter(Boolean).join(', ')
-      status.push(`Resource contention ON ✓ (required by: ${triggers})`)
+      status.push(`Resource waiting is enabled for changes to ${triggers}.`)
     }
   }
 
@@ -109,9 +110,9 @@ function computeAutoAdjust(
   if (hasShare && effectiveContention) {
     if (config.resource_routing !== 'probabilistic') {
       overrides.resource_routing = 'probabilistic'
-      warnings.push('Routing will be auto-set to probabilistic (resource share mods target specific resource–activity pairs)')
+      warnings.push('Resource assignment will use probabilities so the changed assignment shares take effect.')
     } else {
-      status.push('Probabilistic routing ON ✓ (required by: resource share)')
+      status.push('Resource assignment uses the specified probabilities.')
     }
   }
 
@@ -970,13 +971,13 @@ export default function ScenarioBuilder() {
             <div className="grid grid-cols-2 gap-3">
               {([
                 { label: 'Sim days', key: 'sim_days', min: 1, max: 365,
-                  tooltip: 'Number of calendar days to simulate after the warm-up period. Results are aggregated from this window only.' },
+                  tooltip: 'Simulation period after warm-up, in calendar days.' },
                 { label: 'Warm-up days', key: 'warmup_days', min: 0, max: 60,
-                  tooltip: 'Cases run before recording results to pre-fill resource queues and eliminate empty-queue bias at simulation start.' },
+                  tooltip: 'Initial cases excluded from results so resource queues can build up before measurement.' },
                 { label: 'Runs (avg)', key: 'num_runs', min: 1, max: 20,
-                  tooltip: 'Number of independent runs (each with a different seed). Results are averaged to reduce statistical noise.' },
+                  tooltip: 'Number of runs with different seeds. The displayed KPIs are averaged across runs.' },
                 { label: 'Random seed', key: 'random_seed', min: 0, max: 99999,
-                  tooltip: 'Starting seed for the random number generator. The same seed always produces the same result.' },
+                  tooltip: 'Starting random seed. Matching settings and seeds reproduce the same run.' },
               ] as { label: string; key: keyof typeof config; min: number; max: number; tooltip: string }[]).map(({ label, key, min, max, tooltip }) => {
                 const logSpanDays = (modelSummary?.log_metrics as Record<string, unknown> | null)?.log_span_days as number | undefined
                 const hint = key === 'sim_days' && logSpanDays != null

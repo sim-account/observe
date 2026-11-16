@@ -1,6 +1,6 @@
 # Data-Driven Simulation for Process Improvement: From Process Behavior Observations to Improvement Recommendations
 
-This repository provides OBSERVE, the implementation accompanying the paper above. OBSERVE discovers a modifiable simulation model and process behavior observations from event logs, derives improvement recommendations, and compares simulated as-is and to-be KPIs to estimate the process-wide impact of selected recommendations. It includes the FastAPI backend, React frontend, and code and reference results for both numerical experiments.
+OBSERVE turns improvement opportunities found in event logs into recommendations and uses simulation to estimate their process-wide effects. This repository contains the application and the code and results for the paper’s two numerical experiments.
 
 ## Abstract
 
@@ -8,32 +8,36 @@ Organizations continuously strive to improve their processes, for instance, by r
 
 ## Run the application
 
-Install Python 3.11, [uv](https://docs.astral.sh/uv/), and Node.js 20.19 or newer. From the repository root:
+Install Python 3.11, [uv](https://docs.astral.sh/uv/), and Node.js 20.19 or newer. From the repository root, run:
 
-    uv sync --project backend --locked
-    npm ci --prefix frontend
-    ./start.sh
+```bash
+./start.sh
+```
 
-Open http://localhost:5173. Upload a CSV or Excel log, map its columns, inspect simulation parameters and observations, select or edit a recommendation, and compare simulations. Resources and paired timestamps are optional.
+Open http://localhost:5173. Upload a CSV or Excel event log, map its columns, and select recommendations to compare as-is and to-be simulations. Resource information and paired start/end timestamps are optional.
 
-The application runs without evaluation data or API credentials. Natural-language scenarios use a local parser, with optional Anthropic configuration. Sessions expire after two hours. Downloaded logs contain the latest single simulation; frontend replications aggregate KPIs using incremented seeds.
+## Evaluation
 
-## Reproduce the numerical evaluations
+Download the [evaluation data (129 MB)](https://drive.google.com/file/d/14BOiA-VJPH8FLYiU_ZoxZkRJawY4zPWl/view?usp=sharing). From the repository root, run the following commands, adjusting the archive path if you saved it elsewhere:
 
-Download [observe-evaluation-data-v1.tar.gz (129 MB)](https://drive.google.com/file/d/14BOiA-VJPH8FLYiU_ZoxZkRJawY4zPWl/view?usp=sharing) from Google Drive. Then install the locked numerical dependencies and the archive, replacing the example path with the location of your downloaded file:
+```bash
+uv sync --project backend --locked --group evaluation
+python3 evaluation/bundle.py install --archive ~/Downloads/observe-evaluation-data-v1.tar.gz
+```
 
-    uv sync --project backend --locked --group evaluation
-    python evaluation/bundle.py install --archive /path/to/observe-evaluation-data-v1.tar.gz
+To recreate the paper’s tables and figure from the saved simulation outputs:
 
-The installer verifies archive and manifest checksums and refuses to overwrite existing data. Archive details are in [data_bundle.json](evaluation/data_bundle.json).
+```bash
+# Experiment 1: simulation accuracy
+uv run --project backend --locked --group evaluation python evaluation/reproduce_comparison.py
 
-Reproduce the simulation-accuracy table (Experiment 1) and the opportunity-identification and recommendation-impact figure (Experiment 2):
+# Experiment 2: opportunity identification and recommendation impact
+uv run --project backend --locked --group evaluation python evaluation/paper_step2/plot_results.py
+```
 
-    uv run --project backend --locked --group evaluation python evaluation/reproduce_comparison.py
-    uv run --project backend --locked --group evaluation python evaluation/paper_step2/plot_results.py
+Outputs are saved under `generated-results/`. Evaluation data and generated files are ignored by Git.
 
-The accuracy table is written in LaTeX, Markdown, and CSV formats to generated-results/as_is/comparison/. The figure, numerical summaries, and plot metadata are written to generated-results/opportunities-analysis/.
+For instructions on rerunning the experiments, see:
 
-See [as-is reproduction instructions](evaluation/README_REPRODUCE.md) and the [four-opportunity instructions](evaluation/paper_step2/README.md) and [protocol](evaluation/paper_step2/PROTOCOL.md) for regeneration and verification. Small reference tables and figures are included under each evaluation's reference/ directory.
-
-Both evaluations accept --data-root, overriding OBSERVE_DATA_DIR; the default is observe-data/ in this repository. Generated outputs default to generated-results/ and are kept separate from the inputs. The evaluation archive, extracted data, and generated outputs are excluded by .gitignore and will not be included in future commits.
+- [Experiment 1: simulation accuracy](evaluation/README_REPRODUCE.md)
+- [Experiment 2: opportunity identification and recommendation impact](evaluation/paper_step2/README.md)

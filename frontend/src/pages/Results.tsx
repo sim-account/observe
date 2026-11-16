@@ -298,7 +298,7 @@ function ModAudit({ audit }: { audit: ModificationAuditRecord[] }) {
           </tbody>
         </table>
         <p className="px-5 py-2 text-[10px] text-gray-300 border-t border-gray-50">
-          Expected Δ = change in weighted mean service time (time/resource mods). Capacity mods show slot count before → after with observed peak.
+          Estimated processing-time changes use activity durations and resource assignments. Capacity changes show slots before and after the change, alongside the observed peak workload.
         </p>
       </div>
     </Collapsible>

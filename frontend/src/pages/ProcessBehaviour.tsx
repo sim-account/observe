@@ -258,7 +258,7 @@ export default function ProcessBehaviour() {
           <div className="px-5 py-4 border-b border-gray-100">
             <h2 className="font-semibold text-gray-900">Residual Waiting-Time Distributions</h2>
             <p className="text-xs text-gray-400 mt-0.5">
-              Enablement-to-release delays remaining after observed calendars and resource capacity are replayed
+              Waiting time not explained by resource availability and working calendars
             </p>
           </div>
           <div className="overflow-x-auto">

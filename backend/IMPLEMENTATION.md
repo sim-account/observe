@@ -1,24 +1,26 @@
-# Shared model and scenario implementation
+# Simulation model and scenario changes
 
-The application and both numerical evaluations use the same discovery and simulation code. Activity durations, arrivals, routing history, resource assignments, calendars, rework, parallel overlaps, and case-attribute distributions form the simulation model. Observations and recommendation scores identify candidate changes; the simulator consumes the statistical model rather than the observation catalogue.
+The application and both numerical experiments share the discovery and simulation code. The model contains activity durations, arrivals, recent-activity routing probabilities, resource assignments and capacities, calendars, rework, parallel execution probabilities, residual waiting times, and case-attribute distributions. Observations provide evidence for recommendations; simulations use the model parameters.
 
-## Evaluated scenarios
+## Changes tested in Experiment 2
 
-| Opportunity | Discovery and comparison | Executable change |
+| Opportunity | Comparison | Scenario change |
 | --- | --- | --- |
-| O1: slow repetitions | Calendar-aware durations for repeating cases | Global activity-duration reduction |
-| O2: slow resource | Calendar-aware durations against the disjoint resource complement | Relative resource-assignment reduction |
-| O3: concentrated assignment | Compare assignments after a predecessor with other predecessors | Global assignment share set to the observed complement |
-| O4: segment-associated rework | Activity-specific comparison among visiting cases against the complement segment | Normalized rework probabilities and aligned history routing; visit caps retained |
+| O1: slow repetitions | Activity durations in cases that repeat the activity versus those that do not | Reduce duration for all executions of the activity |
+| O2: slow resource | Activity durations for one resource versus all other resources | Reduce that resource's assignment share and redistribute it to the others |
+| O3: concentrated assignment | Resource assignments after one predecessor versus other predecessors | Set the activity's resource share to the share observed after other predecessors |
+| O4: segment-associated rework | Repetition rates among cases that visit the activity, comparing one attribute value with the other values | Reduce the activity's rework probabilities and update its routing probabilities; retain visit limits |
 
-These implementations preserve the numerical definitions used by the four-opportunity evaluation. Scenario audits report the effective baseline, resulting parameters, and global intervention scope.
+Duration comparisons account for working calendars. These scenario changes apply across the activity or resource, including cases outside the observed context. The modification audit reports the before and after parameter values and the scope of the change.
 
-## General application behavior
+## Other supported changes
 
-Conditional-rework comparisons use first-execution exposure and disjoint reference populations. Conditional-routing tests apply eligibility gates and edit actual decision branches. Eventual-sequence observations without an executable direct transition remain visible without a fictitious scenario effect. Case-attribute comparisons use complement populations; recommendations change executable model parameters rather than inventing segment-specific duration effects.
+Conditional-rework observations compare cases by the predecessor or resource of the activity's first execution. Conditional-routing observations compare branch probabilities between a context and the remaining cases; their scenarios change the gateway's routing probabilities globally. Eventual-sequence observations can produce routing changes when the corresponding direct transition exists. An observation without such a transition can still be inspected, but has no suggested routing change.
 
-The rework modifier handles multistep and branching return paths as well as self-loops. Unsupported modifications return HTTP 422. Resource- and terminal-aware downstream costs are ranking approximations, not evaluated accuracy claims.
+Rework changes support self-loops and return paths through multiple activities or branches. Unsupported changes return HTTP 422. Recommendation ranking uses approximate downstream costs; ranking scores are not measured KPI improvements.
 
-## Interpretation
+## Assumptions and limitations
 
-Durations are lognormal and arrivals exponential. Resource slots and calendars create contention. Case attributes are sampled independently and do not condition routing or durations. Post-run constraints check outcomes rather than enforce them. One backend request performs one simulation; the frontend aggregates replications using incremented seeds. Exported logs represent the latest run.
+Durations are lognormal and arrivals are exponential. Resource capacities and calendars determine when activities can start. Case attributes are sampled independently and do not affect routing or durations. Case-attribute recommendations change activity or resource parameters across cases.
+
+Constraints are checked after simulation; they do not enforce behavior during a run. Each backend request runs one simulation. The frontend averages results over runs with successive seeds, while the downloadable event log contains only the latest run.
