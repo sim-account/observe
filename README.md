@@ -2,6 +2,10 @@
 
 OBSERVE discovers modifiable business process simulation parameters and process behavior observations from event logs, proposes scenario changes, and compares simulated as-is and to-be performance. This repository contains the FastAPI backend, React frontend, and code and reference outputs for both numerical evaluations.
 
+## Abstract
+
+Organizations continuously strive to improve their processes, for instance, by reducing cycle times or cutting costs. Analyzing the process data recorded by information systems supports this goal, but mostly reveals local improvement opportunities, such as activities that take longer when assigned to particular resources. Fixing such local problems, e.g., by reallocating work away from these resources, may merely shift the overload to others rather than improve the entire process. Business process simulation (BPS) can reveal such process-wide effects before implementing potential process changes, by simulating what-if scenarios that incorporate them. Yet, existing BPS approaches require analysts to manually translate each considered change into modifications of a simulation model, which typically limits the assessment to a few intuitively selected changes. To overcome this, we propose OBSERVE, an approach that automatically turns local improvement opportunities into improvement recommendations and reveals which of them improve the process as a whole. This is enabled through the incorporation of a novel data-driven simulation method, whose discovered models have parameters that directly correspond to the behaviors that recommendations commonly target. Our evaluation shows that OBSERVE achieves state-of-the-art as-is simulation accuracy, which provides a reliable basis for estimating the impact of recommendations. Moreover, in controlled experiments, OBSERVE identifies 98% of known improvement opportunities, and its recommendations yield estimated cycle-time improvements in ten of twelve settings. Finally, 20 practitioners from five companies found the recommendations useful for prioritizing changes.
+
 ## Run the application
 
 Install Python 3.11, [uv](https://docs.astral.sh/uv/), and Node.js 20.19 or newer. From the repository root:
@@ -33,12 +37,3 @@ The accuracy table is written in LaTeX, Markdown, and CSV formats to generated-r
 See [as-is reproduction instructions](evaluation/README_REPRODUCE.md) and the [four-opportunity instructions](evaluation/paper_step2/README.md) and [protocol](evaluation/paper_step2/PROTOCOL.md) for regeneration and verification. Small reference tables and figures are included under each evaluation's reference/ directory.
 
 Both evaluations accept --data-root, overriding OBSERVE_DATA_DIR; the default is observe-data/ in this repository. Generated outputs default to generated-results/ and are kept separate from the inputs. Both directories are Git-ignored.
-
-## Tests and model behavior
-
-    uv run --project backend --locked --group evaluation python -m unittest discover -s backend/tests
-    npm run build --prefix frontend
-
-The API tests cover upload, discovery, scenario execution, constraints, and exported logs. See [backend model and scenario behavior](backend/IMPLEMENTATION.md) for the shared numerical implementation.
-
-[Practitioner-study evidence availability](study-evidence/README.md) is documented separately.
